@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Repaso: software libre y licencias abiertas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EDE7D8;
+    --card: #FAF7EE;
+    --ink: #202B3B;
+    --ink-soft: #4B5768;
+    --line: #C9BFA6;
+    --copper: #AE5E1F;
+    --copper-soft: #E4C79B;
+    --good: #3F6B4F;
+    --good-bg: #DEE9DF;
+    --bad: #9C3B2E;
+    --bad-bg: #F1DDD6;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 18px 60px;
+  }
+  .wrap{ width: 100%; max-width: 680px; }
+
+  header{ margin-bottom: 28px; }
+  .kicker{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--copper);
+    letter-spacing: 0.02em;
+    margin: 0 0 8px;
+  }
+  h1{
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: clamp(32px, 6vw, 44px);
+    line-height: 1.05;
+    margin: 0 0 12px;
+  }
+  header p{
+    color: var(--ink-soft);
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 52ch;
+    margin: 0;
+  }
+
+  .statusbar{
+    display:flex;
+    align-items:center;
+    gap: 14px;
+    margin: 26px 0 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .track{
+    flex: 1;
+    height: 6px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .track-fill{
+    height: 100%;
+    background: var(--copper);
+    transition: width .35s ease;
+  }
+  .score-chip{
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 4px 10px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .card{
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 30px 28px 26px;
+    position: relative;
+  }
+  .card::before{
+    content: "";
+    position: absolute;
+    top: 10px; left: 10px; right: 10px; bottom: 10px;
+    border: 1px dashed var(--line);
+    border-radius: 3px;
+    pointer-events: none;
+    opacity: .55;
+  }
+
+  .qtype{
+    display:inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--copper);
+    border: 1px solid var(--copper-soft);
+    background: #FFF9EF;
+    padding: 3px 9px;
+    border-radius: 3px;
+    margin-bottom: 16px;
+  }
+  .prompt{
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.35;
+    margin: 0 0 22px;
+  }
+
+  .options{ display:flex; flex-direction:column; gap: 10px; }
+  .opt{
+    display:flex;
+    align-items:flex-start;
+    gap: 12px;
+    text-align:left;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 13px 15px;
+    font-size: 15.5px;
+    line-height: 1.45;
+    cursor: pointer;
+    color: var(--ink);
+    font-family: inherit;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .opt:hover:not(.locked){ border-color: var(--copper); }
+  .opt .bullet{
+    flex: 0 0 auto;
+    width: 20px; height: 20px;
+    border: 1.5px solid var(--ink-soft);
+    border-radius: 50%;
+    margin-top: 1px;
+  }
+  .opt.correct{ background: var(--good-bg); border-color: var(--good); }
+  .opt.correct .bullet{ border-color: var(--good); background: var(--good); }
+  .opt.incorrect{ background: var(--bad-bg); border-color: var(--bad); }
+  .opt.incorrect .bullet{ border-color: var(--bad); background: var(--bad); }
+  .opt.locked{ cursor: default; }
+
+  .feedback{
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 5px;
+    font-size: 15px;
+    line-height: 1.5;
+    display: none;
+  }
+  .feedback.show{ display:block; }
+  .feedback.good{ background: var(--good-bg); border: 1px solid var(--good); color: #24402d; }
+  .feedback.bad{ background: var(--bad-bg); border: 1px solid var(--bad); color: #5c261d; }
+  .feedback strong{ display:block; font-family:'IBM Plex Mono', monospace; font-size: 12.5px; margin-bottom: 4px; }
+
+  .match-cols{ display:flex; gap: 16px; }
+  .match-col{ flex:1; display:flex; flex-direction:column; gap: 9px; }
+  .match-item{
+    background:#fff;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 11px 13px;
+    font-size: 14.5px;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .match-item:hover:not(.paired):not(.locked-wrong){ border-color: var(--copper); }
+  .match-item.selected{ border-color: var(--copper); background: #FFF3E4; }
+  .match-item.paired{ background: var(--good-bg); border-color: var(--good); cursor: default; }
+  .match-item.wrong-flash{ background: var(--bad-bg); border-color: var(--bad); }
+
+  .next-btn, .primary-btn{
+    margin-top: 22px;
+    background: var(--ink);
+    color: #FAF7EE;
+    border: none;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    padding: 12px 22px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: none;
+  }
+  .next-btn.show, .primary-btn.show{ display:inline-block; }
+  .next-btn:hover, .primary-btn:hover{ background: var(--copper); }
+
+  .hint{ font-size: 13px; color: var(--ink-soft); margin-top: 14px; }
+
+  .summary{ text-align:left; }
+  .summary .big{
+    font-family:'Fraunces', serif;
+    font-weight: 600;
+    font-size: 46px;
+    margin: 4px 0 6px;
+  }
+  .summary p{ color: var(--ink-soft); font-size: 15.5px; line-height: 1.5; }
+
+  footer{
+    margin-top: 26px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  @media (max-width: 520px){
+    .match-cols{ flex-direction: column; }
+    .card{ padding: 24px 18px 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="kicker">Repaso · propiedad intelectual y software</p>
+    <h1>Software libre y licencias abiertas</h1>
+    <p>Preguntas de opción múltiple y de relación sobre software libre, copyleft, GPL y Creative Commons. El orden cambia cada vez que se abre la página.</p>
+  </header>
+
+  <div class="statusbar">
+    <span id="qcounter">Pregunta 1 de 14</span>
+    <div class="track"><div class="track-fill" id="trackFill" style="width:0%"></div></div>
+    <span class="score-chip" id="scoreChip">Aciertos: 0</span>
+  </div>
+
+  <div class="card" id="card"></div>
+
+  <footer id="footerNote"></footer>
+</div>
+
+<script>
+// ---------- Banco de preguntas ----------
+const BANK = [
+  {
+    type: "mc",
+    prompt: "¿Qué significa realmente que un programa sea “software libre”?",
+    options: [
+      "Que no cuesta dinero descargarlo.",
+      "Que los usuarios tienen libertad para usarlo, estudiarlo, modificarlo y redistribuirlo.",
+      "Que fue creado por un solo programador sin empresa detrás.",
+      "Que su código no tiene ningún tipo de licencia."
+    ],
+    correct: 1,
+    feedback: "El software libre se define por cuatro libertades (usar, estudiar, modificar y compartir), no por el precio. Un programa puede ser gratis y no ser libre, o costar dinero y sí serlo."
+  },
+  {
+    type: "mc",
+    prompt: "Un programa es “freeware”: se descarga gratis, pero su código fuente no es público y no se puede modificar. ¿Es software libre?",
+    options: [
+      "Sí, porque no cuesta nada.",
+      "No, porque falta el acceso al código y la libertad de modificarlo.",
+      "Sí, siempre que se use solo para fines educativos.",
+      "No, porque el software libre nunca es gratuito."
+    ],
+    correct: 1,
+    feedback: "Gratis y libre son cosas distintas. Sin acceso al código fuente y sin permiso para modificarlo, no se cumplen las libertades básicas del software libre."
+  },
+  {
+    type: "mc",
+    prompt: "¿Qué es el “copyleft” en una licencia de software?",
+    options: [
+      "Una forma de decir que el autor renuncia a todos sus derechos.",
+      "Una condición que obliga a que las versiones modificadas se compartan bajo la misma licencia libre.",
+      "Un sinónimo de código cerrado o propietario.",
+      "Un trámite legal para registrar una marca."
+    ],
+    correct: 1,
+    feedback: "El copyleft usa el derecho de autor para exigir lo contrario de lo habitual: cualquier obra derivada debe seguir siendo libre y mantener la misma licencia."
+  },
+  {
+    type: "mc",
+    prompt: "Si una empresa modifica un programa con licencia GPL y lo distribuye, ¿qué está obligada a hacer?",
+    options: [
+      "Nada, la GPL no impone condiciones al distribuir.",
+      "Pagar una licencia a la Free Software Foundation.",
+      "Publicar el código fuente de su versión modificada bajo GPL también.",
+      "Pedir permiso al autor original cada vez que la distribuye."
+    ],
+    correct: 2,
+    feedback: "La GPL es una licencia copyleft: quien distribuye una versión modificada debe entregar el código fuente y mantenerla bajo GPL, no puede volverla privativa."
+  },
+  {
+    type: "mc",
+    prompt: "MIT y BSD son licencias “permisivas”. ¿Cuál es su diferencia principal frente a la GPL?",
+    options: [
+      "No permiten usar el código en proyectos comerciales.",
+      "Permiten crear versiones modificadas cerradas o privativas, sin obligar a compartir el código.",
+      "Solo pueden usarse en universidades.",
+      "Prohíben que el software se venda."
+    ],
+    correct: 1,
+    feedback: "Las licencias permisivas piden poco: básicamente citar al autor original. A diferencia del copyleft, no obligan a que las versiones modificadas sigan siendo libres."
+  },
+  {
+    type: "mc",
+    prompt: "La LGPL (GPL “reducida”) se usa mucho en bibliotecas de código. ¿Qué permite que la GPL normal no permite?",
+    options: [
+      "Que se use el código sin ninguna condición.",
+      "Que un programa privativo enlace con esa biblioteca sin volverse GPL por completo.",
+      "Que el código se pueda patentar.",
+      "Que solo empresas grandes puedan usarla."
+    ],
+    correct: 1,
+    feedback: "La LGPL relaja el copyleft: un software con licencia propietaria puede usar la biblioteca sin tener que liberar todo su propio código."
+  },
+  {
+    type: "mc",
+    prompt: "En una licencia Creative Commons, ¿qué indica la sigla “NC”?",
+    options: [
+      "Que la obra no puede modificarse.",
+      "Que se debe dar crédito al autor.",
+      "Que no se permite un uso comercial de la obra.",
+      "Que la obra pasa a dominio público."
+    ],
+    correct: 2,
+    feedback: "NC significa “No Comercial”: la obra puede usarse y compartirse, pero no para obtener ganancias económicas, salvo que el autor dé permiso aparte."
+  },
+  {
+    type: "mc",
+    prompt: "¿Qué restringe la condición “ND” (Sin Obra Derivada) en Creative Commons?",
+    options: [
+      "Prohíbe compartir la obra con otras personas.",
+      "Prohíbe modificar o crear versiones transformadas de la obra.",
+      "Prohíbe usar la obra en internet.",
+      "Obliga a pagar regalías al autor."
+    ],
+    correct: 1,
+    feedback: "ND permite copiar y distribuir la obra tal cual, pero no permite alterarla, traducirla de forma libre, mezclarla o crear una versión distinta."
+  },
+  {
+    type: "mc",
+    prompt: "¿Qué significa marcar una obra como CC0?",
+    options: [
+      "Que solo puede usarse citando al autor.",
+      "Que el autor renuncia a sus derechos y la obra pasa prácticamente a dominio público.",
+      "Que la obra no puede copiarse bajo ninguna circunstancia.",
+      "Que la licencia caduca a los 0 años de publicada."
+    ],
+    correct: 1,
+    feedback: "CC0 es la licencia más abierta: el autor cede sus derechos patrimoniales y cualquiera puede usar la obra sin pedir permiso ni dar crédito."
+  },
+  {
+    type: "mc",
+    prompt: "Una foto tiene licencia CC BY-SA. La usas y le agregas un filtro para publicarla en tu blog. ¿Qué te exige la licencia?",
+    options: [
+      "Nada, con CC ya no hay ninguna obligación.",
+      "Dar crédito al autor original y compartir tu versión bajo esa misma licencia (SA = compartir igual).",
+      "Pagar al autor por el uso.",
+      "Pedir autorización notarial."
+    ],
+    correct: 1,
+    feedback: "SA (“Share Alike” / Compartir Igual) funciona como el copyleft de Creative Commons: tu versión modificada debe llevar la misma licencia, además de acreditar al autor original (BY)."
+  },
+  {
+    type: "match",
+    prompt: "Relaciona cada sigla de Creative Commons con lo que exige o restringe.",
+    pairs: [
+      { term: "BY", def: "Se debe dar crédito al autor original" },
+      { term: "SA", def: "La obra derivada debe compartirse con la misma licencia" },
+      { term: "NC", def: "No se permite un uso con fines comerciales" },
+      { term: "ND", def: "No se permite modificar ni crear obras derivadas" }
+    ]
+  },
+  {
+    type: "match",
+    prompt: "Relaciona cada término general con su definición correcta.",
+    pairs: [
+      { term: "Copyleft", def: "Exige que las versiones modificadas mantengan la misma licencia libre" },
+      { term: "Licencia permisiva", def: "Permite crear versiones cerradas o privativas del código" },
+      { term: "Dominio público", def: "La obra no tiene restricciones de autor y cualquiera puede usarla libremente" },
+      { term: "Código fuente", def: "Versión legible del programa, escrita por humanos, antes de compilarse" }
+    ]
+  },
+  {
+    type: "match",
+    prompt: "Relaciona cada licencia con la característica que mejor la describe.",
+    pairs: [
+      { term: "GPL", def: "Copyleft fuerte: toda obra derivada debe ser libre y abierta" },
+      { term: "MIT", def: "Permisiva y muy simple: solo pide mantener el aviso de autoría" },
+      { term: "CC BY-NC", def: "Permite compartir y adaptar, pero nunca con fines comerciales" },
+      { term: "Apache 2.0", def: "Permisiva, e incluye una cláusula explícita sobre patentes" }
+    ]
+  },
+  {
+    type: "mc",
+    prompt: "¿Es legal vender copias de un programa con licencia GPL?",
+    options: [
+      "No, la GPL prohíbe cualquier venta.",
+      "Sí, la GPL permite cobrar por distribuir el software, siempre que se entregue también el código fuente y las libertades de la licencia.",
+      "Solo si el comprador es una escuela o universidad.",
+      "Sí, pero solo si se elimina la licencia original."
+    ],
+    correct: 1,
+    feedback: "La GPL protege libertades, no el precio: se puede cobrar por copias, soporte o distribución, pero quien lo reciba debe conservar el código fuente y el derecho a redistribuirlo."
+  }
+];
+
+// ---------- Utilidades ----------
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let quiz = [];
+let current = 0;
+let score = 0;
+
+function buildQuiz(){
+  quiz = shuffle(BANK).map(q => {
+    if(q.type === "mc"){
+      const optionObjs = q.options.map((text, idx) => ({ text, isCorrect: idx === q.correct }));
+      return { ...q, options: shuffle(optionObjs) };
+    } else {
+      return {
+        ...q,
+        terms: shuffle(q.pairs.map((p, i) => ({ text: p.term, id: i }))),
+        defs: shuffle(q.pairs.map((p, i) => ({ text: p.def, id: i })))
+      };
+    }
+  });
+  current = 0;
+  score = 0;
+  renderQuestion();
+}
+
+function updateStatus(){
+  document.getElementById("qcounter").textContent = `Pregunta ${current + 1} de ${quiz.length}`;
+  document.getElementById("trackFill").style.width = `${(current / quiz.length) * 100}%`;
+  document.getElementById("scoreChip").textContent = `Aciertos: ${score}`;
+}
+
+function renderQuestion(){
+  updateStatus();
+  const q = quiz[current];
+  const card = document.getElementById("card");
+
+  if(q.type === "mc"){
+    card.innerHTML = `
+      <span class="qtype">Opción múltiple</span>
+      <p class="prompt">${q.prompt}</p>
+      <div class="options" id="opts"></div>
+      <div class="feedback" id="fb"></div>
+      <button class="next-btn" id="nextBtn">Siguiente</button>
+    `;
+    const optsWrap = document.getElementById("opts");
+    q.options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "opt";
+      btn.innerHTML = `<span class="bullet"></span><span>${opt.text}</span>`;
+      btn.addEventListener("click", () => answerMC(opt, btn));
+      optsWrap.appendChild(btn);
+    });
+  } else {
+    card.innerHTML = `
+      <span class="qtype">Relaciona las columnas</span>
+      <p class="prompt">${q.prompt}</p>
+      <div class="match-cols">
+        <div class="match-col" id="colTerms"></div>
+        <div class="match-col" id="colDefs"></div>
+      </div>
+      <p class="hint" id="matchHint">Toca un elemento de la izquierda y luego su pareja en la derecha.</p>
+      <button class="next-btn" id="nextBtn">Siguiente</button>
+    `;
+    const colTerms = document.getElementById("colTerms");
+    const colDefs = document.getElementById("colDefs");
+    q._selectedTerm = null;
+    q._matchedCount = 0;
+    q._mistakeMade = false;
+
+    q.terms.forEach(t => {
+      const el = document.createElement("div");
+      el.className = "match-item";
+      el.textContent = t.text;
+      el.dataset.id = t.id;
+      el.addEventListener("click", () => selectTerm(q, t, el));
+      colTerms.appendChild(el);
+    });
+    q.defs.forEach(d => {
+      const el = document.createElement("div");
+      el.className = "match-item";
+      el.textContent = d.text;
+      el.dataset.id = d.id;
+      el.addEventListener("click", () => selectDef(q, d, el));
+      colDefs.appendChild(el);
+    });
+  }
+
+  document.getElementById("nextBtn").addEventListener("click", nextQuestion);
+}
+
+function answerMC(opt, btnEl){
+  const q = quiz[current];
+  const allBtns = document.querySelectorAll("#opts .opt");
+  allBtns.forEach(b => b.classList.add("locked"));
+  allBtns.forEach((b, i) => {
+    b.onclick = null;
+    if(q.options[i].isCorrect) b.classList.add("correct");
+  });
+  if(!opt.isCorrect){
+    btnEl.classList.add("incorrect");
+  } else {
+    score++;
+  }
+  const fb = document.getElementById("fb");
+  fb.classList.add("show", opt.isCorrect ? "good" : "bad");
+  fb.innerHTML = `<strong>${opt.isCorrect ? "Correcto" : "No es correcto"}</strong>${q.feedback}`;
+  document.getElementById("nextBtn").classList.add("show");
+  updateStatus();
+}
+
+function selectTerm(q, t, el){
+  if(el.classList.contains("paired")) return;
+  document.querySelectorAll("#colTerms .match-item").forEach(e => e.classList.remove("selected"));
+  el.classList.add("selected");
+  q._selectedTerm = { data: t, el };
+}
+
+function selectDef(q, d, el){
+  if(el.classList.contains("paired") || !q._selectedTerm) return;
+  const term = q._selectedTerm;
+  if(term.data.id === d.id){
+    term.el.classList.remove("selected");
+    term.el.classList.add("paired");
+    el.classList.add("paired");
+    q._matchedCount++;
+    q._selectedTerm = null;
+    if(q._matchedCount === q.pairs.length){
+      document.getElementById("matchHint").textContent = q._mistakeMade
+        ? "Completado, con algún tropiezo en el camino. Revisa las relaciones antes de seguir."
+        : "¡Todas las parejas correctas a la primera!";
+      if(!q._mistakeMade) score++;
+      document.getElementById("nextBtn").classList.add("show");
+      updateStatus();
+    }
+  } else {
+    q._mistakeMade = true;
+    el.classList.add("wrong-flash");
+    term.el.classList.add("wrong-flash");
+    setTimeout(() => {
+      el.classList.remove("wrong-flash");
+      term.el.classList.remove("wrong-flash", "selected");
+    }, 450);
+    q._selectedTerm = null;
+  }
+}
+
+function nextQuestion(){
+  current++;
+  if(current < quiz.length){
+    renderQuestion();
+  } else {
+    showSummary();
+  }
+}
+
+function showSummary(){
+  document.getElementById("qcounter").textContent = `Repaso terminado`;
+  document.getElementById("trackFill").style.width = `100%`;
+  document.getElementById("scoreChip").textContent = `Aciertos: ${score}`;
+  const pct = Math.round((score / quiz.length) * 100);
+  let msg;
+  if(pct >= 85) msg = "Dominas bien las diferencias entre software libre, copyleft y Creative Commons.";
+  else if(pct >= 60) msg = "Vas bien encaminado. Repasa las condiciones de GPL y los elementos de Creative Commons.";
+  else msg = "Conviene repasar el concepto de las cuatro libertades, el copyleft y las siglas de Creative Commons.";
+
+  document.getElementById("card").innerHTML = `
+    <div class="summary">
+      <span class="qtype">Resultado</span>
+      <p class="big">${score} / ${quiz.length}</p>
+      <p>${msg}</p>
+      <button class="primary-btn show" id="restartBtn">Repasar de nuevo (orden distinto)</button>
+    </div>
+  `;
+  document.getElementById("restartBtn").addEventListener("click", buildQuiz);
+}
+
+document.getElementById("footerNote").textContent = "Las preguntas y sus opciones se reordenan cada vez que se carga la página.";
+buildQuiz();
+</script>
+</body>
+</html>
